@@ -60,7 +60,7 @@ async function getBalance(pk) {
 // GAME LOGIC (client preview only)
 // ═══════════════════════════════════════════════════════════════
 const CK = 15, BAR = "bar", OFF = "off", W = 1, B = -1;
-const INIT = () => { const b = Array(24).fill(0); b[0]=2;b[5]=-5;b[7]=-3;b[11]=5;b[12]=-5;b[16]=3;b[18]=5;b[23]=-2; return b; };
+const INIT = () => { const b = Array(24).fill(0); b[0]=-2;b[5]=5;b[7]=3;b[11]=-5;b[12]=5;b[16]=-3;b[18]=-5;b[23]=2; return b; };
 
 function gvm(board,bW,bB,pl,dice){const m=[];fm(board,bW,bB,pl,[...dice],[],m,new Set());return m}
 function fm(board,bW,bB,pl,rd,cm,am,seen){if(!rd.length){const k=JSON.stringify(cm);if(!seen.has(k)){seen.add(k);am.push([...cm])}return}let f=false;for(let di=0;di<rd.length;di++){const die=rd[di];const srcs=gs(board,bW,bB,pl);for(const src of srcs){const dest=gd(src,die,pl);if(dest===null)continue;if(!iv(board,bW,bB,pl,src,dest,die))continue;f=true;const[nb,nW,nB,hit]=am2(board,bW,bB,pl,src,dest);const nd=[...rd];nd.splice(di,1);fm(nb,nW,nB,pl,nd,[...cm,{from:src,to:dest,die,hit}],am,seen)}}if(!f&&cm.length>0){const k=JSON.stringify(cm);if(!seen.has(k)){seen.add(k);am.push([...cm])}}}
