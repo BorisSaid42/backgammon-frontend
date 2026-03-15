@@ -198,8 +198,21 @@ function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPoint
   const PW = (WD - M * 2 - BW) / 12, PH = 215, CR = Math.min(PW * .44, 21);
   const wC = "var(--white-checker)", bC = "var(--black-checker)";
 
-  const topRow = flipped ? [11,10,9,8,7,6,null,5,4,3,2,1,0] : [12,13,14,15,16,17,null,18,19,20,21,22,23];
-  const botRow = flipped ? [12,13,14,15,16,17,null,18,19,20,21,22,23] : [11,10,9,8,7,6,null,5,4,3,2,1,0];
+  // White's view: 
+  //   Top L→R: pt13,14,15,16,17,18 | pt19,20,21,22,23,24  (idx 12..17 | 18..23)
+  //   Bot L→R: pt12,11,10,9,8,7    | pt6,5,4,3,2,1        (idx 11..6  | 5..0)
+  //   White home = bottom-right (pts 1-6). White moves counterclockwise.
+  //
+  // Black's view (180° flip):
+  //   Top L→R: pt1,2,3,4,5,6       | pt7,8,9,10,11,12     (idx 0..5   | 6..11)
+  //   Bot L→R: pt24,23,22,21,20,19 | pt18,17,16,15,14,13  (idx 23..18 | 17..12)
+  //   Black home = bottom-left (pts 19-24). Black moves counterclockwise.
+  const topRow = flipped
+    ? [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, 11]
+    : [12, 13, 14, 15, 16, 17, null, 18, 19, 20, 21, 22, 23];
+  const botRow = flipped
+    ? [23, 22, 21, 20, 19, 18, null, 17, 16, 15, 14, 13, 12]
+    : [11, 10, 9, 8, 7, 6, null, 5, 4, 3, 2, 1, 0];
 
   function gx(vi) { return vi < 6 ? M + vi * PW + PW / 2 : M + 6 * PW + BW + (vi - 6) * PW + PW / 2; }
 
@@ -399,6 +412,8 @@ export default function App() {
   // Polling
   const pollGame = useCallback(async () => {
     if (!lobbyId) return;
+    // Don't poll while player is mid-move or confirming — it would reset client-side preview state
+    if (pendingMoves.length > 0 || awaitingConfirm) return;
     try {
       const d = await api(`/lobby/${lobbyId}`);
       if (d.game && prevTurnRef.current !== null && d.game.turn !== prevTurnRef.current) { setDiceKey(k => k + 1); setPendingMoves([]); setAwaitingConfirm(false); }
@@ -409,7 +424,7 @@ export default function App() {
       if (d.status === "playing" && screen === "lobby") setScreen("game");
       if (d.status === "waiting" && screen === "game") setScreen("lobby");
     } catch {}
-  }, [lobbyId, myColor, screen, showFireworks]);
+  }, [lobbyId, myColor, screen, showFireworks, pendingMoves.length, awaitingConfirm]);
 
   useEffect(() => { if (lobbyId) { pollGame(); pollRef.current = setInterval(pollGame, 1500); return () => clearInterval(pollRef.current); } }, [lobbyId, pollGame]);
 
