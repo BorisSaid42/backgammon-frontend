@@ -6,11 +6,11 @@ import {
   SystemProgram,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
- 
+
 // ═══════════════════════════════════════════════════════════════
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 const HELIUS_RPC = import.meta.env.VITE_HELIUS_RPC || "https://api.mainnet-beta.solana.com";
- 
+
 async function api(path, opts = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json" }, ...opts,
@@ -20,7 +20,7 @@ async function api(path, opts = {}) {
   if (!res.ok) throw new Error(data.error || "Server error");
   return data;
 }
- 
+
 // ═══════════════════════════════════════════════════════════════
 // PHANTOM
 // ═══════════════════════════════════════════════════════════════
@@ -31,14 +31,14 @@ function getPhantom() {
   }
   return null;
 }
- 
+
 async function connectPhantom() {
   const p = getPhantom();
   if (!p) throw new Error("Phantom wallet not found. Install the Phantom extension.");
   const r = await p.connect();
   return { provider: p, publicKey: r.publicKey.toString() };
 }
- 
+
 async function signPayment(provider, housePK, amountSol) {
   const conn = new Connection(HELIUS_RPC, "confirmed");
   const from = provider.publicKey;
@@ -50,18 +50,18 @@ async function signPayment(provider, housePK, amountSol) {
   const { signature } = await provider.signAndSendTransaction(tx);
   return signature;
 }
- 
+
 async function getBalance(pk) {
   try { const c = new Connection(HELIUS_RPC, "confirmed"); return (await c.getBalance(new PublicKey(pk))) / LAMPORTS_PER_SOL; }
   catch { return 0; }
 }
- 
+
 // ═══════════════════════════════════════════════════════════════
 // GAME LOGIC (client preview only)
 // ═══════════════════════════════════════════════════════════════
 const CK = 15, BAR = "bar", OFF = "off", W = 1, B = -1;
 const INIT = () => { const b = Array(24).fill(0); b[0]=2;b[5]=-5;b[7]=-3;b[11]=5;b[12]=-5;b[16]=3;b[18]=5;b[23]=-2; return b; };
- 
+
 function gvm(board,bW,bB,pl,dice){const m=[];fm(board,bW,bB,pl,[...dice],[],m,new Set());return m}
 function fm(board,bW,bB,pl,rd,cm,am,seen){if(!rd.length){const k=JSON.stringify(cm);if(!seen.has(k)){seen.add(k);am.push([...cm])}return}let f=false;for(let di=0;di<rd.length;di++){const die=rd[di];const srcs=gs(board,bW,bB,pl);for(const src of srcs){const dest=gd(src,die,pl);if(dest===null)continue;if(!iv(board,bW,bB,pl,src,dest,die))continue;f=true;const[nb,nW,nB,hit]=am2(board,bW,bB,pl,src,dest);const nd=[...rd];nd.splice(di,1);fm(nb,nW,nB,pl,nd,[...cm,{from:src,to:dest,die,hit}],am,seen)}}if(!f&&cm.length>0){const k=JSON.stringify(cm);if(!seen.has(k)){seen.add(k);am.push([...cm])}}}
 function gs(board,bW,bB,pl){const bar=pl===W?bW:bB;if(bar>0)return[BAR];const s=[];for(let i=0;i<24;i++){if((pl===W&&board[i]>0)||(pl===B&&board[i]<0))s.push(i)}return s}
@@ -71,7 +71,7 @@ function iv(board,bW,bB,pl,src,dest,die){const bar=pl===W?bW:bB;if(src===BAR&&ba
 function am2(board,bW,bB,pl,src,dest){const nb=[...board];let nW=bW,nB=bB,hit=false;if(src===BAR){if(pl===W)nW--;else nB--}else{nb[src]+=pl===W?-1:1}if(dest!==OFF){if(pl===W&&nb[dest]===-1){nb[dest]=0;nB++;hit=true}else if(pl===B&&nb[dest]===1){nb[dest]=0;nW++;hit=true}nb[dest]+=pl===W?1:-1}return[nb,nW,nB,hit]}
 function gbo(board,bW,bB,pl){let on=pl===W?bW:bB;for(let i=0;i<24;i++){if(pl===W&&board[i]>0)on+=board[i];if(pl===B&&board[i]<0)on+=Math.abs(board[i])}return CK-on}
 function gmm(vm){if(!vm.length)return 0;return Math.max(...vm.map(m=>m.length))}
- 
+
 // ═══════════════════════════════════════════════════════════════
 // SESSION PERSISTENCE
 // ═══════════════════════════════════════════════════════════════
@@ -82,7 +82,7 @@ function loadSession() {
   try { const s = sessionStorage.getItem("bg_session"); if (!s) return null; const d = JSON.parse(s); if (Date.now() - d.ts > 4 * 3600000) return null; return d; } catch { return null; }
 }
 function clearSession() { try { sessionStorage.removeItem("bg_session"); } catch {} }
- 
+
 // ═══════════════════════════════════════════════════════════════
 // CSS — PokerNow-inspired dark green felt
 // ═══════════════════════════════════════════════════════════════
@@ -115,7 +115,7 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 .pop-in{animation:popIn .35s cubic-bezier(.4,1.4,.6,1) both}
 .spin{animation:spin .8s linear infinite}
 `;
- 
+
 // ═══════════════════════════════════════════════════════════════
 // UI COMPONENTS
 // ═══════════════════════════════════════════════════════════════
@@ -131,7 +131,7 @@ const Btn = ({ children, variant = "default", disabled, style, ...p }) => {
   };
   return <button {...p} disabled={disabled} style={{ ...base, ...variants[variant] }} onMouseEnter={e=>{if(!disabled)e.target.style.filter="brightness(1.1)"}} onMouseLeave={e=>{e.target.style.filter=""}}>{children}</button>;
 };
- 
+
 function Fireworks() {
   const p = useMemo(() => Array.from({ length: 40 }, (_, i) => {
     const a = (Math.PI * 2 * i) / 40 + (Math.random() - .5) * .5, d = 50 + Math.random() * 130;
@@ -139,7 +139,7 @@ function Fireworks() {
   }), []);
   return <div style={{ position: "absolute", top: "50%", left: "50%", pointerEvents: "none", zIndex: 10 }}>{p.map((p, i) => <div key={i} style={{ position: "absolute", width: p.s, height: p.s, borderRadius: "50%", background: p.c, '--fx': `${p.fx}px`, '--fy': `${p.fy}px`, animation: `firework ${p.dur}s ${p.del}s cubic-bezier(.16,1,.3,1) both` }} />)}</div>;
 }
- 
+
 function DiceDisplay({ dice, usedDice = [], diceKey }) {
   if (!dice?.length) return null;
   const used = new Set();
@@ -155,7 +155,7 @@ function DiceDisplay({ dice, usedDice = [], diceKey }) {
     }}>{d}</div>;
   })}</div>;
 }
- 
+
 function TxOverlay({ message }) {
   return <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
     <div className="slide-down" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "32px 40px", textAlign: "center", maxWidth: 380 }}>
@@ -165,7 +165,7 @@ function TxOverlay({ message }) {
     </div>
   </div>;
 }
- 
+
 function ConfirmMoveModal({ onConfirm, onUndo }) {
   return <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
     <div className="pop-in" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 36px", textAlign: "center", maxWidth: 340 }}>
@@ -177,7 +177,7 @@ function ConfirmMoveModal({ onConfirm, onUndo }) {
     </div>
   </div>;
 }
- 
+
 function WalletBtn({ wallet, onConnect, balance }) {
   if (wallet) {
     return <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", background: "var(--felt-dark)", borderRadius: 4, border: "1px solid var(--felt-light)", fontSize: 13 }}>
@@ -188,16 +188,16 @@ function WalletBtn({ wallet, onConnect, balance }) {
   }
   return <Btn variant="sol" onClick={onConnect} style={{ fontSize: 13, padding: "8px 16px" }}>👻 Connect Phantom</Btn>;
 }
- 
- 
+
+
 // ═══════════════════════════════════════════════════════════════
 // BOARD SVG
 // ═══════════════════════════════════════════════════════════════
-function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPointClick, onBarClick, playerColor, flipped, cubeValue, cubeOwner, offW, offB }) {
+function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPointClick, onBarClick, playerColor, cubeValue, cubeOwner, offW, offB }) {
   const WD = 780, HT = 540, M = 32, BW = 36;
   const PW = (WD - M * 2 - BW) / 12, PH = 215, CR = Math.min(PW * .44, 21);
   const wC = "var(--white-checker)", bC = "var(--black-checker)";
- 
+
   // White's view: 
   //   Top L→R: pt13,14,15,16,17,18 | pt19,20,21,22,23,24  (idx 12..17 | 18..23)
   //   Bot L→R: pt12,11,10,9,8,7    | pt6,5,4,3,2,1        (idx 11..6  | 5..0)
@@ -207,15 +207,16 @@ function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPoint
   //   Top L→R: pt1,2,3,4,5,6       | pt7,8,9,10,11,12     (idx 0..5   | 6..11)
   //   Bot L→R: pt24,23,22,21,20,19 | pt18,17,16,15,14,13  (idx 23..18 | 17..12)
   //   Black home = bottom-left (pts 19-24). Black moves counterclockwise.
-  const topRow = flipped
-    ? [0, 1, 2, 3, 4, 5, null, 6, 7, 8, 9, 10, 11]
-    : [12, 13, 14, 15, 16, 17, null, 18, 19, 20, 21, 22, 23];
-  const botRow = flipped
-    ? [23, 22, 21, 20, 19, 18, null, 17, 16, 15, 14, 13, 12]
-    : [11, 10, 9, 8, 7, 6, null, 5, 4, 3, 2, 1, 0];
- 
+  // Both players see the same board. No flipping.
+  // Top L→R: pts 13,14,15,16,17,18 | 19,20,21,22,23,24  (idx 12-17 | 18-23)
+  // Bot L→R: pts 12,11,10,9,8,7    | 6,5,4,3,2,1        (idx 11-6  | 5-0)
+  // White home = bottom-right (pts 1-6). White moves counterclockwise.
+  // Black home = top-right (pts 19-24). Black moves clockwise.
+  const topRow = [12, 13, 14, 15, 16, 17, null, 18, 19, 20, 21, 22, 23];
+  const botRow = [11, 10, 9, 8, 7, 6, null, 5, 4, 3, 2, 1, 0];
+
   function gx(vi) { return vi < 6 ? M + vi * PW + PW / 2 : M + 6 * PW + BW + (vi - 6) * PW + PW / 2; }
- 
+
   function drawPt(idx, vi, top) {
     const x = gx(vi), y = top ? M : HT - M, dir = top ? 1 : -1;
     const sel = selectedPoint === idx, val = validDestinations.includes(idx);
@@ -231,7 +232,7 @@ function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPoint
       </g>
     );
   }
- 
+
   function drawCk(count, cx, by, dir, pi) {
     if (!count) return null;
     const isW = count > 0, col = isW ? wC : bC, st = isW ? "#c4a882" : "#444";
@@ -249,33 +250,33 @@ function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPoint
     if (n > mx) items.push(<text key="c" x={cx} y={by + dir * (CR + (mx - 1) * CR * 1.8) + 4} textAnchor="middle" fill={isW ? "#333" : "#ccc"} fontSize="12" fontWeight="700">{n}</text>);
     return items;
   }
- 
+
   function drawBar() {
     const bx = M + 6 * PW, items = [];
     for (let i = 0; i < barW; i++) items.push(<circle key={`bw${i}`} cx={bx + BW / 2} cy={HT / 2 + 30 + i * 24} r={CR * .85} fill={wC} stroke="#c4a882" strokeWidth={1.5} onClick={() => onBarClick(W)} style={{ cursor: "pointer" }} />);
     for (let i = 0; i < barB; i++) items.push(<circle key={`bb${i}`} cx={bx + BW / 2} cy={HT / 2 - 30 - i * 24} r={CR * .85} fill={bC} stroke="#444" strokeWidth={1.5} onClick={() => onBarClick(B)} style={{ cursor: "pointer" }} />);
     return items;
   }
- 
+
   function drawOff() {
     const items = [], ox = WD - 18;
-    for (let i = 0; i < offW; i++) items.push(<rect key={`ow${i}`} x={ox - 10} y={(flipped ? M + i * 8 : HT - M - 6 - i * 8)} width={20} height={6} rx={1} fill={wC} stroke="#c4a882" strokeWidth={.5} />);
-    for (let i = 0; i < offB; i++) items.push(<rect key={`ob${i}`} x={ox - 10} y={(flipped ? HT - M - 6 - i * 8 : M + i * 8)} width={20} height={6} rx={1} fill={bC} stroke="#444" strokeWidth={.5} />);
+    for (let i = 0; i < offW; i++) items.push(<rect key={`ow${i}`} x={ox - 10} y={HT - M - 6 - i * 8} width={20} height={6} rx={1} fill={wC} stroke="#c4a882" strokeWidth={.5} />);
+    for (let i = 0; i < offB; i++) items.push(<rect key={`ob${i}`} x={ox - 10} y={M + i * 8} width={20} height={6} rx={1} fill={bC} stroke="#444" strokeWidth={.5} />);
     if (validDestinations.includes(OFF)) {
-      const oy = playerColor === W ? (flipped ? M : HT - M - 120) : (flipped ? HT - M - 120 : M);
+      const oy = playerColor === W ? HT - M - 120 : M;
       items.push(<g key="off" onClick={() => onPointClick(OFF)} style={{ cursor: "pointer" }}><rect x={ox - 14} y={oy} width={28} height={120} rx={4} fill="rgba(39,174,96,.2)" stroke="var(--green)" strokeWidth={1.5} strokeDasharray="4 3" /><text x={ox} y={oy + 64} textAnchor="middle" fill="var(--green)" fontSize="10" fontWeight="600">OFF</text></g>);
     }
     return items;
   }
- 
+
   function drawCube() {
     let cx, cy;
     if (cubeOwner === 0) { cx = M + 6 * PW + BW / 2; cy = HT / 2; }
-    else if (cubeOwner === W) { cx = 14; cy = flipped ? M + 50 : HT - M - 50; }
-    else { cx = 14; cy = flipped ? HT - M - 50 : M + 50; }
+    else if (cubeOwner === W) { cx = 14; cy = HT - M - 50; }
+    else { cx = 14; cy = M + 50; }
     return <g><rect x={cx - 13} y={cy - 13} width={26} height={26} rx={3} fill="#3a2a18" stroke="var(--accent)" strokeWidth={1} /><text x={cx} y={cy + 5} textAnchor="middle" fill="var(--accent)" fontSize="13" fontWeight="700" fontFamily="'Inter',sans-serif">{cubeValue}</text></g>;
   }
- 
+
   const top = topRow.filter(x => x !== null), bot = botRow.filter(x => x !== null);
   return (
     <svg viewBox={`0 0 ${WD} ${HT}`} style={{ width: "100%", maxWidth: 820, display: "block", margin: "0 auto" }}>
@@ -288,7 +289,7 @@ function BoardSVG({ board, barW, barB, selectedPoint, validDestinations, onPoint
     </svg>
   );
 }
- 
+
 // ── Doubling Dialog ──
 function DoublingDialog({ type, cubeValue, onAccept, onReject, playerName, wagerPerPoint }) {
   const newCube = type === "beaver" ? cubeValue * 4 : cubeValue * 2;
@@ -307,15 +308,15 @@ function DoublingDialog({ type, cubeValue, onAccept, onReject, playerName, wager
     </div>
   </div>;
 }
- 
- 
+
+
 // ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function App() {
   // URL params
   const [joinParam] = useState(() => new URLSearchParams(window.location.search).get("join"));
- 
+
   const [screen, setScreen] = useState("home");
   const [lobbyId, setLobbyId] = useState(null);
   const [playerId, setPlayerId] = useState(null);
@@ -341,7 +342,7 @@ export default function App() {
   const [phantomProvider, setPhantomProvider] = useState(null);
   const [txStatus, setTxStatus] = useState(null);
   const [housePK, setHousePK] = useState(null);
- 
+
   // Init
   useEffect(() => {
     if (!document.getElementById('bg-css')) { const s = document.createElement('style'); s.id = 'bg-css'; s.textContent = CSS; document.head.appendChild(s); }
@@ -356,14 +357,14 @@ export default function App() {
     const p = getPhantom();
     if (p && p.isConnected && p.publicKey) { setPhantomProvider(p); setWalletAddr(p.publicKey.toString()); getBalance(p.publicKey.toString()).then(b => setWalletBalance(b)).catch(() => {}); }
   }, []);
- 
+
   async function handleConnect() {
     try { const { provider, publicKey } = await connectPhantom(); setPhantomProvider(provider); setWalletAddr(publicKey); setError(""); setWalletBalance(await getBalance(publicKey)); }
     catch (e) { setError(e.message); }
   }
- 
+
   async function refreshBal() { if (walletAddr) try { setWalletBalance(await getBalance(walletAddr)); } catch {} }
- 
+
   async function payAndCall(amt, path, body) {
     let sig = null;
     if (amt > 0) {
@@ -376,7 +377,7 @@ export default function App() {
     try { const r = await api(path, { method: "POST", body: { ...body, txSignature: sig } }); setTxStatus(null); await refreshBal(); return r; }
     catch (e) { setTxStatus(null); throw e; }
   }
- 
+
   async function createLobby() {
     if (!nameInput.trim()) { setError("Enter a name"); return; }
     const wager = parseFloat(wagerAmount) || 0;
@@ -388,7 +389,7 @@ export default function App() {
       setScreen("lobby"); setError("");
     } catch (e) { setError(e.message); }
   }
- 
+
   async function joinLobby() {
     if (!nameInput.trim()) { setError("Enter a name"); return; }
     const code = (joinCode || joinParam || "").trim();
@@ -403,18 +404,18 @@ export default function App() {
       setScreen("lobby"); setError(""); window.history.replaceState({}, "", window.location.pathname);
     } catch (e) { setError(e.message); }
   }
- 
+
   async function startGame() {
     try { const r = await api(`/lobby/${lobbyId}/start`, { method: "POST", body: { playerId } }); setLobby(r); setDiceKey(k => k + 1); setShowFireworks(false); setPendingMoves([]); setAwaitingConfirm(false); }
     catch (e) { setError(e.message); }
   }
- 
+
   // Track pending state in refs so polling doesn't re-create on every move
   const pendingRef = useRef(pendingMoves);
   const confirmRef = useRef(awaitingConfirm);
   useEffect(() => { pendingRef.current = pendingMoves; }, [pendingMoves]);
   useEffect(() => { confirmRef.current = awaitingConfirm; }, [awaitingConfirm]);
- 
+
   // Polling — uses refs to check mid-move state without re-creating the callback
   const pollGame = useCallback(async () => {
     if (!lobbyId) return;
@@ -430,29 +431,29 @@ export default function App() {
       if (d.status === "waiting" && screen === "game") setScreen("lobby");
     } catch {}
   }, [lobbyId, myColor, screen, showFireworks]);
- 
+
   useEffect(() => { if (lobbyId) { pollGame(); pollRef.current = setInterval(pollGame, 1500); return () => clearInterval(pollRef.current); } }, [lobbyId, pollGame]);
- 
+
   const game = lobby?.game;
   const isMyTurn = game?.turn === myColor;
   const wagerPP = lobby?.wagerPerPoint || 0;
   const hostName = lobby?.host?.name || "Host";
   const guestName = lobby?.guest?.name || "Waiting...";
   const matchScore = lobby?.matchScore || { w: 0, b: 0 };
- 
+
   async function submitMoves(moves = pendingMoves) {
     try { const r = await api(`/lobby/${lobbyId}/move`, { method: "POST", body: { playerId, moves } }); setLobby(r); }
     catch (e) { setError(e.message); }
     setPendingMoves([]); setSelectedPoint(null); setValidDestinations([]); setDiceKey(k => k + 1); setAwaitingConfirm(false);
   }
- 
+
   async function handleDouble() {
     if (!isMyTurn || game.phase !== "move") return;
     if (game.cubeOwner !== 0 && game.cubeOwner !== myColor) return;
     try { const r = await payAndCall(game.cubeValue * wagerPP, `/lobby/${lobbyId}/double`, { playerId }); setLobby(r); }
     catch (e) { setError(e.message); }
   }
- 
+
   async function handleDoubleResponse(accept, beaver = false) {
     const dp = game.doublingPending; if (!dp) return;
     const action = !accept ? "drop" : beaver ? "beaver" : "accept";
@@ -462,7 +463,7 @@ export default function App() {
     catch (e) { setError(e.message); }
     setDoublingDialog(null);
   }
- 
+
   // Pure helper functions — no dependency on React state, always compute from source
   function computeBoard(moves) {
     if (!game) return { board: INIT(), barW: 0, barB: 0 };
@@ -481,38 +482,38 @@ export default function App() {
     const { board: b, barW: bw, barB: bb } = computeBoard(moves);
     return gvm(b, bw, bb, myColor, computeDice(moves));
   }
- 
+
   // Memos for RENDERING only (board display, dice display, destination highlights)
   const currentBoard = useMemo(() => computeBoard(pendingMoves), [game, pendingMoves, myColor]);
   const remainingDice = useMemo(() => computeDice(pendingMoves), [game, pendingMoves]);
   const currentValidMoves = useMemo(() => awaitingConfirm ? [] : computeValid(pendingMoves), [game, isMyTurn, pendingMoves, myColor, awaitingConfirm]);
   const maxMoves = useMemo(() => gmm(currentValidMoves), [currentValidMoves]);
- 
+
   function handlePointClick(pi) {
     if (!isMyTurn || game.phase !== "move" || awaitingConfirm) return;
- 
+
     if (selectedPoint !== null && validDestinations.includes(pi)) {
       // Execute move — compute everything inline, no memo dependency
       const curBoard = computeBoard(pendingMoves);
       const curValid = computeValid(pendingMoves);
- 
+
       // Find the die for this move
       let die = null;
       for (const ms of curValid) { if (ms.length > 0 && ms[0].from === selectedPoint && ms[0].to === pi) { die = ms[0].die; break; } }
       if (die === null) { die = computeDice(pendingMoves)[0]; }
- 
+
       const [,,, hit] = am2(curBoard.board, curBoard.barW, curBoard.barB, myColor, selectedPoint, pi);
       const np = [...pendingMoves, { from: selectedPoint, to: pi, die, hit }];
- 
+
       // Check dice remaining AFTER this move
       const diceAfter = computeDice(np);
- 
+
       if (diceAfter.length === 0) {
         setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
         setAwaitingConfirm(true);
         return;
       }
- 
+
       // Check if any legal moves remain with leftover dice
       const boardAfter = computeBoard(np);
       const futureValid = gvm(boardAfter.board, boardAfter.barW, boardAfter.barB, myColor, diceAfter);
@@ -521,28 +522,28 @@ export default function App() {
         setAwaitingConfirm(true);
         return;
       }
- 
+
       // More moves possible — continue
       setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
       return;
     }
- 
+
     if (selectedPoint === pi) { setSelectedPoint(null); setValidDestinations([]); return; }
- 
+
     // Select a new source
     setSelectedPoint(null); setValidDestinations([]);
     const curBoard = computeBoard(pendingMoves);
     const bar = myColor === W ? curBoard.barW : curBoard.barB;
     if (pi === BAR || bar > 0) return;
     if ((myColor === W && curBoard.board[pi] <= 0) || (myColor === B && curBoard.board[pi] >= 0)) return;
- 
+
     const curValid = computeValid(pendingMoves);
     const dests = new Set();
     for (const ms of curValid) { if (ms.length > 0 && ms[0].from === pi) dests.add(ms[0].to); }
     if (!dests.size) return;
     setSelectedPoint(pi); setValidDestinations([...dests]);
   }
- 
+
   function handleBarClick(c) {
     if (c !== myColor || !isMyTurn || game.phase !== "move" || awaitingConfirm) return;
     const curBoard = computeBoard(pendingMoves);
@@ -554,10 +555,10 @@ export default function App() {
     if (!dests.size) return;
     setSelectedPoint(BAR); setValidDestinations([...dests]);
   }
- 
+
   function undoAll() { setPendingMoves([]); setSelectedPoint(null); setValidDestinations([]); setAwaitingConfirm(false); }
   function undoLast() { setPendingMoves(p => p.slice(0, -1)); setSelectedPoint(null); setValidDestinations([]); setAwaitingConfirm(false); }
- 
+
   // Auto-select bar
   useEffect(() => {
     if (!isMyTurn || !game || game.phase !== "move" || awaitingConfirm) return;
@@ -565,16 +566,16 @@ export default function App() {
     const bar = myColor === W ? curBoard.barW : curBoard.barB;
     if (bar > 0 && selectedPoint !== BAR) handleBarClick(myColor);
   }, [isMyTurn, game?.phase, pendingMoves.length, awaitingConfirm]);
- 
+
   function copyLink() {
     const link = `${window.location.origin}?join=${lobbyId}`;
     navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
   }
- 
+
   function leaveLobby() { clearSession(); setLobbyId(null); setPlayerId(null); setMyColor(null); setLobby(null); setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); }
- 
-  const flipped = myColor === B;
- 
+
+  // Board is the same for both players — no flipping
+
   // ═══════════════════════════════════════════════════════════════
   // JOIN PAGE (when ?join= is in URL and user hasn't joined yet)
   // ═══════════════════════════════════════════════════════════════
@@ -601,7 +602,7 @@ export default function App() {
       </div>
     );
   }
- 
+
   // ═══════════════════════════════════════════════════════════════
   // HOME
   // ═══════════════════════════════════════════════════════════════
@@ -644,7 +645,7 @@ export default function App() {
       </div>
     );
   }
- 
+
   // ═══════════════════════════════════════════════════════════════
   // LOBBY
   // ═══════════════════════════════════════════════════════════════
@@ -676,22 +677,22 @@ export default function App() {
       </div>
     );
   }
- 
+
   // ═══════════════════════════════════════════════════════════════
   // GAME
   // ═══════════════════════════════════════════════════════════════
   if (!game) return <div style={S.page}><div className="fade-in" style={{ color: "var(--text-muted)" }}>Loading...</div></div>;
- 
+
   const offW = gbo(currentBoard.board, currentBoard.barW, currentBoard.barB, W);
   const offB = gbo(currentBoard.board, currentBoard.barW, currentBoard.barB, B);
   const canDbl = isMyTurn && game.phase === "move" && pendingMoves.length === 0 && !awaitingConfirm && (game.cubeOwner === 0 || game.cubeOwner === myColor);
- 
+
   return (
     <div style={{ ...S.page, justifyContent: "flex-start", paddingTop: 12 }}>
       {txStatus && <TxOverlay message={txStatus} />}
       {doublingDialog && <DoublingDialog type={doublingDialog.type} cubeValue={game.cubeValue} onAccept={b => handleDoubleResponse(true, b)} onReject={() => handleDoubleResponse(false)} playerName={doublingDialog.from === W ? hostName : guestName} wagerPerPoint={wagerPP} />}
       {awaitingConfirm && <ConfirmMoveModal onConfirm={() => submitMoves(pendingMoves)} onUndo={undoAll} />}
- 
+
       {/* Scoreboard */}
       <div className="fade-in" style={{ maxWidth: 820, width: "100%", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--card)", borderRadius: 6, padding: "8px 16px", border: "1px solid var(--card-border)", ...(isMyTurn ? { boxShadow: "0 0 12px rgba(200,170,110,.15)" } : {}) }}>
@@ -711,14 +712,14 @@ export default function App() {
         <div style={{ color: "var(--text-muted)", fontSize: 11, textAlign: "center", marginTop: 3 }}>{game.lastAction}</div>
         {lobby?.payoutSignature && <div style={{ color: "var(--green)", fontSize: 11, textAlign: "center", marginTop: 2 }}>Payout sent ✓</div>}
       </div>
- 
+
       <DiceDisplay dice={game.dice} usedDice={pendingMoves.map(m => m.die)} diceKey={diceKey} />
- 
+
       <div style={{ position: "relative", width: "100%", maxWidth: 820 }}>
         {showFireworks && game.phase === "gameover" && <Fireworks />}
-        <BoardSVG board={currentBoard.board} barW={currentBoard.barW} barB={currentBoard.barB} selectedPoint={selectedPoint} validDestinations={validDestinations} onPointClick={handlePointClick} onBarClick={handleBarClick} playerColor={myColor} flipped={flipped} cubeValue={game.cubeValue} cubeOwner={game.cubeOwner} offW={offW} offB={offB} />
+        <BoardSVG board={currentBoard.board} barW={currentBoard.barW} barB={currentBoard.barB} selectedPoint={selectedPoint} validDestinations={validDestinations} onPointClick={handlePointClick} onBarClick={handleBarClick} playerColor={myColor} cubeValue={game.cubeValue} cubeOwner={game.cubeOwner} offW={offW} offB={offB} />
       </div>
- 
+
       {/* Controls */}
       <div className="fade-in" style={{ maxWidth: 820, width: "100%", marginTop: 8, textAlign: "center" }}>
         {game.phase === "gameover" ? (
@@ -739,14 +740,14 @@ export default function App() {
           <div style={{ color: "var(--text-muted)", fontSize: 13, animation: "pulse 2s ease-in-out infinite" }}>Waiting for {game.turn === W ? hostName : guestName}...</div>
         ) : null}
       </div>
- 
+
       <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 11, marginTop: 6 }}>
         You are {myColor === W ? "⚪ White" : "⚫ Black"}{walletAddr && <span> · <span style={{ color: "var(--sol)" }}>{walletAddr.slice(0, 4)}...{walletAddr.slice(-4)}</span></span>}
       </div>
     </div>
   );
 }
- 
+
 // ═══════════════════════════════════════════════════════════════
 // STYLES
 // ═══════════════════════════════════════════════════════════════
