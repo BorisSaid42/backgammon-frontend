@@ -623,11 +623,33 @@ export default function App() {
       const die = findDie(selectedPoint, pi);
       const [,,, hit] = applyMove(currentBoard.board, currentBoard.barW, currentBoard.barB, myColor, selectedPoint, pi);
       const np = [...pendingMoves, { from: selectedPoint, to: pi, die, hit }];
-      setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
-      // Auto-submit only if ALL dice are used
+      
+      // Compute remaining dice after this move
       const diceLeft = [...game.dice];
       for (const m of np) { const idx = diceLeft.indexOf(m.die); if (idx >= 0) diceLeft.splice(idx, 1); }
-      if (diceLeft.length === 0) submitMoves(np);
+      
+      // If all dice used, submit immediately
+      if (diceLeft.length === 0) {
+        setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
+        submitMoves(np);
+        return;
+      }
+      
+      // Check if there are any valid moves left with remaining dice from the new board position
+      let b = [...game.board], bw = game.barW, bb = game.barB;
+      for (const m of np) { [b, bw, bb] = applyMove(b, bw, bb, myColor, m.from, m.to).slice(0, 3); }
+      const futureMoves = getValidMoves(b, bw, bb, myColor, diceLeft);
+      const futureMax = getMaxMoves(futureMoves);
+      
+      // If no more moves possible, auto-submit what we have
+      if (futureMax === 0) {
+        setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
+        submitMoves(np);
+        return;
+      }
+      
+      // Otherwise, save pending and let player continue
+      setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
       return;
     }
     // Deselect
@@ -676,18 +698,14 @@ export default function App() {
 
   function undoLastMove() { setPendingMoves(p => p.slice(0, -1)); setSelectedPoint(null); setValidDestinations([]); }
 
-  // Auto-select bar
+  // Auto-select bar when checker is on bar
   useEffect(() => {
     if (!isMyTurn || !game || game.phase !== "move") return;
     const bar = myColor === WHITE ? currentBoard.barW : currentBoard.barB;
     if (bar > 0 && selectedPoint !== BAR) handleBarClick(myColor);
   }, [isMyTurn, game?.phase, currentBoard, pendingMoves.length]);
 
-  // Auto-submit when no more moves possible
-  useEffect(() => {
-    if (!isMyTurn || !game || game.phase !== "move") return;
-    if (pendingMoves.length > 0 && maxPossibleMoves === 0) submitMoves(pendingMoves);
-  }, [maxPossibleMoves, pendingMoves.length]);
+  // NO auto-submit useEffect — all auto-submit is handled synchronously in handlePointClick
 
   function copyLink() {
     const link = typeof window !== 'undefined' ? `${window.location.origin}?join=${lobbyId}` : lobbyId;
