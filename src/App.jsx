@@ -342,6 +342,10 @@ export default function App() {
   const [phantomProvider, setPhantomProvider] = useState(null);
   const [txStatus, setTxStatus] = useState(null);
   const [housePK, setHousePK] = useState(null);
+  const [publicLobbies, setPublicLobbies] = useState([]);
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [browserFilter, setBrowserFilter] = useState("joinable"); // "all" | "joinable"
+  const [forfeitConfirm, setForfeitConfirm] = useState(false);
  
   // Init
   useEffect(() => {
@@ -356,6 +360,8 @@ export default function App() {
     // Auto-connect phantom
     const p = getPhantom();
     if (p && p.isConnected && p.publicKey) { setPhantomProvider(p); setWalletAddr(p.publicKey.toString()); getBalance(p.publicKey.toString()).then(b => setWalletBalance(b)).catch(() => {}); }
+    // Fetch public lobbies
+    api("/lobbies").then(d => setPublicLobbies(d.lobbies || [])).catch(() => {});
   }, []);
  
   async function handleConnect() {
@@ -574,6 +580,22 @@ export default function App() {
  
   function leaveLobby() { clearSession(); setLobbyId(null); setPlayerId(null); setMyColor(null); setLobby(null); setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); }
  
+  async function fetchLobbies() {
+    try { const d = await api("/lobbies"); setPublicLobbies(d.lobbies || []); }
+    catch { setPublicLobbies([]); }
+  }
+ 
+  async function forfeitGame() {
+    try {
+      const r = await api(`/lobby/${lobbyId}/forfeit`, { method: "POST", body: { playerId } });
+      setLobby(r); setForfeitConfirm(false); setPendingMoves([]); setAwaitingConfirm(false);
+    } catch (e) { setError(e.message); setForfeitConfirm(false); }
+  }
+ 
+  function handleBrowserJoin(id) {
+    setJoinCode(id); setShowBrowser(false);
+  }
+ 
   // Board is the same for both players — no flipping
  
   // ═══════════════════════════════════════════════════════════════
@@ -638,7 +660,39 @@ export default function App() {
             <Btn variant="default" onClick={joinLobby}>Join</Btn>
           </div>
           {error && <div className="fade-in" style={{ color: "var(--red)", fontSize: 13, textAlign: "center", marginTop: 10 }}>{error}</div>}
-          <div style={{ marginTop: 18, padding: "12px 14px", background: "var(--felt-dark)", borderRadius: 4, color: "var(--text-muted)", fontSize: 11, lineHeight: 1.5 }}>
+ 
+          {/* Lobby Browser */}
+          <div style={{ marginTop: 18, borderTop: "1px solid var(--card-border)", paddingTop: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ color: "var(--text-muted)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em" }}>Open Games</span>
+              <Btn variant="ghost" style={{ fontSize: 11, padding: "4px 10px" }} onClick={fetchLobbies}>Refresh</Btn>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+              <Btn variant={browserFilter === "joinable" ? "accent" : "ghost"} style={{ flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setBrowserFilter("joinable")}>Joinable</Btn>
+              <Btn variant={browserFilter === "all" ? "accent" : "ghost"} style={{ flex: 1, fontSize: 11, padding: "6px 0" }} onClick={() => setBrowserFilter("all")}>All</Btn>
+            </div>
+            <div style={{ maxHeight: 200, overflowY: "auto", background: "var(--bg)", borderRadius: 4, border: "1px solid var(--card-border)" }}>
+              {publicLobbies.filter(l => browserFilter === "all" || l.joinable).length === 0 ? (
+                <div style={{ padding: "20px 12px", textAlign: "center", color: "var(--text-muted)", fontSize: 12 }}>
+                  {publicLobbies.length === 0 ? "Click Refresh to load games" : "No games found"}
+                </div>
+              ) : publicLobbies.filter(l => browserFilter === "all" || l.joinable).map(l => (
+                <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid var(--card-border)", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>{l.host}{l.guest ? ` vs ${l.guest}` : ""}</div>
+                    <div style={{ color: "var(--text-muted)", fontSize: 11 }}>
+                      {l.wagerPerPoint > 0 ? <span style={{ color: "var(--sol)" }}>{l.wagerPerPoint}◎/pt</span> : "Free"}
+                      {" · "}{l.status === "waiting" ? "Waiting" : l.status === "playing" ? "In progress" : l.status}
+                    </div>
+                  </div>
+                  {l.joinable && <Btn variant="primary" style={{ fontSize: 11, padding: "5px 12px", whiteSpace: "nowrap" }} onClick={() => handleBrowserJoin(l.id)}>Join</Btn>}
+                  {!l.joinable && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>Full</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+ 
+          <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--felt-dark)", borderRadius: 4, color: "var(--text-muted)", fontSize: 11, lineHeight: 1.5 }}>
             Standard backgammon rules. Doubling cube with beaver. Winner takes the full pot (0% rake).
           </div>
         </div>
@@ -693,6 +747,18 @@ export default function App() {
       {doublingDialog && <DoublingDialog type={doublingDialog.type} cubeValue={game.cubeValue} onAccept={b => handleDoubleResponse(true, b)} onReject={() => handleDoubleResponse(false)} playerName={doublingDialog.from === W ? hostName : guestName} wagerPerPoint={wagerPP} />}
       {awaitingConfirm && <ConfirmMoveModal onConfirm={() => submitMoves(pendingMoves)} onUndo={undoAll} />}
  
+      {/* Forfeit Confirm */}
+      {forfeitConfirm && <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+        <div className="pop-in" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 36px", textAlign: "center", maxWidth: 340 }}>
+          <div style={{ fontSize: 15, color: "var(--text)", marginBottom: 8, fontWeight: 600 }}>Forfeit this game?</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 20 }}>Your opponent wins the current cube value{wagerPP > 0 ? ` and the pot (${(lobby?.totalPot || 0).toFixed(4)} SOL)` : ""}.</div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <Btn variant="ghost" onClick={() => setForfeitConfirm(false)}>Cancel</Btn>
+            <Btn variant="danger" onClick={forfeitGame}>Forfeit</Btn>
+          </div>
+        </div>
+      </div>}
+ 
       {/* Scoreboard */}
       <div className="fade-in" style={{ maxWidth: 820, width: "100%", marginBottom: 8 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--card)", borderRadius: 6, padding: "8px 16px", border: "1px solid var(--card-border)", ...(isMyTurn ? { boxShadow: "0 0 12px rgba(200,170,110,.15)" } : {}) }}>
@@ -744,6 +810,12 @@ export default function App() {
       <div style={{ textAlign: "center", color: "var(--text-muted)", fontSize: 11, marginTop: 6 }}>
         You are {myColor === W ? "⚪ White" : "⚫ Black"}{walletAddr && <span> · <span style={{ color: "var(--sol)" }}>{walletAddr.slice(0, 4)}...{walletAddr.slice(-4)}</span></span>}
       </div>
+      {game.phase !== "gameover" && <div style={{ textAlign: "center", marginTop: 8 }}>
+        <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px", opacity: .6 }} onClick={() => setForfeitConfirm(true)}>Forfeit</Btn>
+      </div>}
+      {game.phase === "gameover" && <div style={{ textAlign: "center", marginTop: 8 }}>
+        <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px" }} onClick={leaveLobby}>Leave</Btn>
+      </div>}
     </div>
   );
 }
