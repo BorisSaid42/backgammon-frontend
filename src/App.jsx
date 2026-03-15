@@ -640,8 +640,8 @@ export default function App() {
     if ((myColor === WHITE && piece <= 0) || (myColor === BLACK && piece >= 0)) return;
     const dests = new Set();
     for (const ms of currentValidMoves) {
-      if (ms.length > pendingMoves.length) {
-        const nm = ms[pendingMoves.length];
+      if (ms.length > 0) {
+        const nm = ms[0];
         if (nm.from === pi) dests.add(nm.to);
       }
     }
@@ -655,8 +655,8 @@ export default function App() {
     if (bar === 0) return;
     const dests = new Set();
     for (const ms of currentValidMoves) {
-      if (ms.length > pendingMoves.length) {
-        const nm = ms[pendingMoves.length];
+      if (ms.length > 0) {
+        const nm = ms[0];
         if (nm.from === BAR) dests.add(nm.to);
       }
     }
@@ -666,12 +666,12 @@ export default function App() {
 
   function findDie(from, to) {
     for (const ms of currentValidMoves) {
-      if (ms.length > pendingMoves.length) {
-        const m = ms[pendingMoves.length];
+      if (ms.length > 0) {
+        const m = ms[0];
         if (m.from === from && m.to === to) return m.die;
       }
     }
-    return game.dice[pendingMoves.length];
+    return remainingDice[0];
   }
 
   function undoLastMove() { setPendingMoves(p => p.slice(0, -1)); setSelectedPoint(null); setValidDestinations([]); }
