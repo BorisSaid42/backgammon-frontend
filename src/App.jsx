@@ -590,13 +590,22 @@ export default function App() {
   }
 
   // Client-side move preview
+  const remainingDice = useMemo(() => {
+    if (!game) return [];
+    const rd = [...game.dice];
+    for (const m of pendingMoves) {
+      const idx = rd.indexOf(m.die);
+      if (idx >= 0) rd.splice(idx, 1);
+    }
+    return rd;
+  }, [game, pendingMoves]);
+
   const currentValidMoves = useMemo(() => {
     if (!game || game.phase !== "move" || !isMyTurn) return [];
-    const rd = game.dice.slice(pendingMoves.length);
     let b = [...game.board], bw = game.barW, bb = game.barB;
     for (const m of pendingMoves) { [b, bw, bb] = applyMove(b, bw, bb, myColor, m.from, m.to).slice(0, 3); }
-    return getValidMoves(b, bw, bb, myColor, rd);
-  }, [game, isMyTurn, pendingMoves, myColor]);
+    return getValidMoves(b, bw, bb, myColor, remainingDice);
+  }, [game, isMyTurn, pendingMoves, myColor, remainingDice]);
 
   const maxPossibleMoves = useMemo(() => getMaxMoves(currentValidMoves), [currentValidMoves]);
 
@@ -615,7 +624,10 @@ export default function App() {
       const [,,, hit] = applyMove(currentBoard.board, currentBoard.barW, currentBoard.barB, myColor, selectedPoint, pi);
       const np = [...pendingMoves, { from: selectedPoint, to: pi, die, hit }];
       setPendingMoves(np); setSelectedPoint(null); setValidDestinations([]);
-      if (game.dice.length - np.length === 0) submitMoves(np);
+      // Auto-submit only if ALL dice are used
+      const diceLeft = [...game.dice];
+      for (const m of np) { const idx = diceLeft.indexOf(m.die); if (idx >= 0) diceLeft.splice(idx, 1); }
+      if (diceLeft.length === 0) submitMoves(np);
       return;
     }
     // Deselect
@@ -816,7 +828,7 @@ export default function App() {
             {canDouble && <button className="btn-hover glow-pulse" style={{ ...S.btn, ...S.btnD }} onClick={handleDouble}>Double ({game.cubeValue}→{game.cubeValue * 2}){wagerPerPoint > 0 ? ` · ${(game.cubeValue * wagerPerPoint).toFixed(4)} SOL` : ""}</button>}
             {pendingMoves.length > 0 && <button className="btn-hover" style={{ ...S.btn, ...S.btnS }} onClick={undoLastMove}>Undo</button>}
             {maxPossibleMoves === 0 && pendingMoves.length === 0 && <button className="btn-hover" style={{ ...S.btn, ...S.btnP }} onClick={() => submitMoves([])}>No Moves — Pass</button>}
-            {pendingMoves.length > 0 && pendingMoves.length < game.dice.length && maxPossibleMoves === 0 && <button className="btn-hover" style={{ ...S.btn, ...S.btnP }} onClick={() => submitMoves()}>Confirm</button>}
+            {pendingMoves.length > 0 && remainingDice.length > 0 && maxPossibleMoves === 0 && <button className="btn-hover" style={{ ...S.btn, ...S.btnP }} onClick={() => submitMoves()}>Confirm</button>}
           </div>
         ) : (
           <p style={{ color: "#4a5a6a", textAlign: "center", fontSize: 14, animation: "softPulse 2s ease-in-out infinite" }}>Waiting for {game.turn === WHITE ? hostName : guestName}...</p>
