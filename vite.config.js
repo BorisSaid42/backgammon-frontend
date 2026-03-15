@@ -10,12 +10,12 @@ export default defineConfig({
   preview: {
     host: '0.0.0.0',
     port: parseInt(process.env.PORT) || 3000,
-    allowedHosts: true,
   },
   build: {
     outDir: 'dist',
   },
   define: {
+    // Needed for @solana/web3.js buffer polyfill
     global: 'globalThis',
   },
 });
