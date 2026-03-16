@@ -108,7 +108,7 @@ body{margin:0;background:var(--bg);font-family:'Inter',system-ui,sans-serif;colo
 @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 @keyframes firework{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--fx),var(--fy)) scale(0);opacity:0}}
 @keyframes popIn{0%{transform:scale(0.8);opacity:0}60%{transform:scale(1.04);opacity:1}100%{transform:scale(1)}}
-.fade-in{animation:fadeIn .3s ease both}
+@keyframes toastIn{0%{transform:translateY(-20px) scale(0.9);opacity:0}15%{transform:translateY(0) scale(1);opacity:1}85%{transform:translateY(0) scale(1);opacity:1}100%{transform:translateY(-20px) scale(0.9);opacity:0}}.fade-in{animation:fadeIn .3s ease both}
 .slide-up{animation:slideUp .4s ease both}
 .slide-down{animation:slideDown .35s cubic-bezier(.4,1.4,.6,1) both}
 .dice-drop{animation:diceDrop .4s cubic-bezier(.4,1.4,.6,1) both}
@@ -346,6 +346,7 @@ export default function App() {
   const [showBrowser, setShowBrowser] = useState(false);
   const [browserFilter, setBrowserFilter] = useState("joinable"); // "all" | "joinable"
   const [forfeitConfirm, setForfeitConfirm] = useState(false);
+  const [turnToast, setTurnToast] = useState(false);
  
   // Init
   useEffect(() => {
@@ -428,12 +429,15 @@ export default function App() {
     if (pendingRef.current.length > 0 || confirmRef.current) return;
     try {
       const d = await api(`/lobby/${lobbyId}`);
-      if (d.game && prevTurnRef.current !== null && d.game.turn !== prevTurnRef.current) { setDiceKey(k => k + 1); setPendingMoves([]); setAwaitingConfirm(false); }
+      if (d.game && prevTurnRef.current !== null && d.game.turn !== prevTurnRef.current) {
+        setDiceKey(k => k + 1); setPendingMoves([]); setAwaitingConfirm(false);
+        if (d.game.turn === myColor && d.game.phase === "move") { setTurnToast(true); setTimeout(() => setTurnToast(false), 2000); }
+      }
       if (d.game) prevTurnRef.current = d.game.turn;
       setLobby(d);
       if (d.game?.doublingPending?.target === myColor) setDoublingDialog({ type: d.game.doublingPending.type, from: d.game.doublingPending.from }); else setDoublingDialog(null);
       if (d.game?.phase === "gameover" && !showFireworks) setShowFireworks(true);
-      if (d.status === "playing" && screen === "lobby") setScreen("game");
+      if (d.status === "playing" && screen === "lobby") { setScreen("game"); if (d.game?.turn === myColor) { setTurnToast(true); setTimeout(() => setTurnToast(false), 2000); } }
       if (d.status === "waiting" && screen === "game") setScreen("lobby");
     } catch {}
   }, [lobbyId, myColor, screen, showFireworks]);
@@ -578,7 +582,20 @@ export default function App() {
     navigator.clipboard.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
   }
  
-  function leaveLobby() { clearSession(); setLobbyId(null); setPlayerId(null); setMyColor(null); setLobby(null); setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); }
+  function goHome() { setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); setForfeitConfirm(false); }
+  function abandonGame() { clearSession(); setLobbyId(null); setPlayerId(null); setMyColor(null); setLobby(null); setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); setForfeitConfirm(false); }
+  function returnToGame() {
+    if (lobbyId && playerId) {
+      setScreen(lobby?.game ? "game" : "lobby");
+    } else {
+      const session = loadSession();
+      if (session) {
+        setLobbyId(session.lobbyId); setPlayerId(session.playerId); setMyColor(session.myColor); setPlayerName(session.playerName);
+        setScreen("game");
+      }
+    }
+  }
+  const hasActiveSession = !!(lobbyId && playerId && screen === "home");
  
   async function fetchLobbies() {
     try { const d = await api("/lobbies"); setPublicLobbies(d.lobbies || []); }
@@ -633,6 +650,15 @@ export default function App() {
       <div style={S.page}>
         {txStatus && <TxOverlay message={txStatus} />}
         <div className="slide-up" style={S.card}>
+          {hasActiveSession && (
+            <div style={{ background: "var(--felt-dark)", borderRadius: 4, padding: "10px 14px", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid var(--green)", gap: 8 }}>
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>You have an active game</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <Btn variant="primary" style={{ fontSize: 11, padding: "5px 12px" }} onClick={returnToGame}>Return</Btn>
+                <Btn variant="ghost" style={{ fontSize: 11, padding: "5px 10px" }} onClick={abandonGame}>Abandon</Btn>
+              </div>
+            </div>
+          )}
           <div style={{ textAlign: "center", marginBottom: 24 }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>🎲</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)" }}>Backgammon Club</div>
@@ -725,7 +751,7 @@ export default function App() {
           </div>
           {myColor === W && <Btn variant="primary" style={{ width: "100%" }} onClick={startGame} disabled={!lobby?.guest}>{lobby?.guest ? "Start Game" : "Waiting..."}</Btn>}
           {myColor === B && !game && <div style={{ color: "var(--text-muted)", textAlign: "center", fontSize: 13 }}>Waiting for host to start...</div>}
-          <Btn variant="ghost" style={{ width: "100%", marginTop: 8, fontSize: 12 }} onClick={leaveLobby}>Leave Lobby</Btn>
+          <Btn variant="ghost" style={{ width: "100%", marginTop: 8, fontSize: 12 }} onClick={goHome}>Leave Lobby</Btn>
           {error && <div className="fade-in" style={{ color: "var(--red)", fontSize: 13, textAlign: "center", marginTop: 8 }}>{error}</div>}
         </div>
       </div>
@@ -746,6 +772,11 @@ export default function App() {
       {txStatus && <TxOverlay message={txStatus} />}
       {doublingDialog && <DoublingDialog type={doublingDialog.type} cubeValue={game.cubeValue} onAccept={b => handleDoubleResponse(true, b)} onReject={() => handleDoubleResponse(false)} playerName={doublingDialog.from === W ? hostName : guestName} wagerPerPoint={wagerPP} />}
       {awaitingConfirm && <ConfirmMoveModal onConfirm={() => submitMoves(pendingMoves)} onUndo={undoAll} />}
+ 
+      {/* Your Turn toast */}
+      {turnToast && <div style={{ position: "fixed", top: 80, left: "50%", transform: "translateX(-50%)", zIndex: 150, pointerEvents: "none", animation: "toastIn 2s ease both" }}>
+        <div style={{ background: "var(--green)", color: "#fff", padding: "10px 28px", borderRadius: 6, fontSize: 16, fontWeight: 700, letterSpacing: ".02em", boxShadow: "0 4px 20px rgba(39,174,96,.4)" }}>Your Turn</div>
+      </div>}
  
       {/* Forfeit Confirm */}
       {forfeitConfirm && <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
@@ -814,7 +845,7 @@ export default function App() {
         <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px", opacity: .6 }} onClick={() => setForfeitConfirm(true)}>Forfeit</Btn>
       </div>}
       {game.phase === "gameover" && <div style={{ textAlign: "center", marginTop: 8 }}>
-        <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px" }} onClick={leaveLobby}>Leave</Btn>
+        <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px" }} onClick={abandonGame}>Leave</Btn>
       </div>}
     </div>
   );
