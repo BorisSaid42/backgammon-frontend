@@ -863,3 +863,4 @@ const S = {
   card: { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 28px", maxWidth: 400, width: "100%" },
   label: { display: "block", color: "var(--text-muted)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 },
   input: { width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 4, color: "var(--text)", fontSize: 14, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box", transition: "border .2s" },
+};
