@@ -676,6 +676,7 @@ export default function App() {
             <div style={{ display: "flex", gap: 6 }}>
               {["0", "0.01", "0.05", "0.1", "0.5"].map(v => <Btn key={v} variant={wagerAmount === v ? "accent" : "ghost"} onClick={() => setWagerAmount(v)} style={{ flex: 1, padding: "8px 0", fontSize: 12 }}>{v === "0" ? "Free" : v + "◎"}</Btn>)}
             </div>
+            <input style={{ ...S.input, marginTop: 8 }} value={wagerAmount} onChange={e => setWagerAmount(e.target.value)} placeholder="Custom amount" type="number" step="0.001" min="0" />
           </div>
           <Btn variant="primary" style={{ width: "100%", marginBottom: 14 }} onClick={createLobby}>
             Create Lobby{parseFloat(wagerAmount) > 0 ? ` · ${wagerAmount} SOL` : ""}
@@ -708,18 +709,21 @@ export default function App() {
                     <div style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>{l.host}{l.guest ? ` vs ${l.guest}` : ""}</div>
                     <div style={{ color: "var(--text-muted)", fontSize: 11 }}>
                       {l.wagerPerPoint > 0 ? <span style={{ color: "var(--sol)" }}>{l.wagerPerPoint}◎/pt</span> : "Free"}
-                      {" · "}{l.status === "waiting" ? "Waiting" : l.status === "playing" ? "In progress" : l.status}
+                      {" · "}{l.status === "finished"
+                        ? <span style={{ color: "var(--accent)" }}>{l.winner} won{l.winPoints ? ` ${l.winPoints}pt` : ""}{l.payout ? ` · ${l.payout.toFixed(4)}◎` : ""}</span>
+                        : l.status === "waiting" ? "Waiting" : l.status === "playing" ? "In progress" : l.status}
                     </div>
                   </div>
                   {l.joinable && <Btn variant="primary" style={{ fontSize: 11, padding: "5px 12px", whiteSpace: "nowrap" }} onClick={() => handleBrowserJoin(l.id)}>Join</Btn>}
-                  {!l.joinable && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>Full</span>}
+                  {!l.joinable && l.status !== "finished" && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>Full</span>}
+                  {l.status === "finished" && <span style={{ color: "var(--text-muted)", fontSize: 11 }}>Done</span>}
                 </div>
               ))}
             </div>
           </div>
  
           <div style={{ marginTop: 14, padding: "12px 14px", background: "var(--felt-dark)", borderRadius: 4, color: "var(--text-muted)", fontSize: 11, lineHeight: 1.5 }}>
-            Standard backgammon rules. Doubling cube with beaver. Winner takes the full pot (0% rake).
+            Standard backgammon rules. Doubling cube with beaver. Winner takes the pot (0.5% fee).
           </div>
         </div>
       </div>
@@ -859,4 +863,3 @@ const S = {
   card: { background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 28px", maxWidth: 400, width: "100%" },
   label: { display: "block", color: "var(--text-muted)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 },
   input: { width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 4, color: "var(--text)", fontSize: 14, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box", transition: "border .2s" },
-};
