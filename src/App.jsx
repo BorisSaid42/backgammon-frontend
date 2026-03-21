@@ -631,12 +631,9 @@ export default function App() {
   async function startRematch() {
     const wager = wagerPP;
     try {
-      const r = await payAndCall(wager, "/lobby/create", { playerName, wallet: walletAddr || "", wagerPerPoint: wager });
-      clearSession();
-      setLobbyId(r.lobbyId); setPlayerId(r.playerId); setMyColor(r.color);
-      saveSession(r.lobbyId, r.playerId, r.color, playerName);
-      setLobby(null); setPendingMoves([]); setAwaitingConfirm(false); setShowFireworks(false);
-      setRematchConfirm(false); setScreen("lobby"); setError("");
+      const r = await payAndCall(wager, `/lobby/${lobbyId}/rematch`, { playerId });
+      setLobby(r); setRematchConfirm(false); setShowFireworks(false); setPendingMoves([]); setAwaitingConfirm(false);
+      if (r.game?.phase === "move") setDiceKey(k => k + 1); // new game started
     } catch (e) { setError(e.message); setRematchConfirm(false); }
   }
  
@@ -817,11 +814,11 @@ export default function App() {
       {rematchConfirm && <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
         <div className="pop-in" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 36px", textAlign: "center", maxWidth: 360 }}>
           <div style={{ fontSize: 16, color: "var(--text)", marginBottom: 8, fontWeight: 600 }}>Start a new game?</div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>A new lobby will be created with the same wager.</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>Pay the wager to propose a rematch. Your opponent will be prompted to accept.</div>
           <div style={{ fontSize: 15, color: "var(--sol)", fontWeight: 700, marginBottom: 20 }}>{wagerPP} SOL per point</div>
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
             <Btn variant="ghost" onClick={() => setRematchConfirm(false)}>Cancel</Btn>
-            <Btn variant="sol" onClick={startRematch}>Pay {wagerPP}◎ & Create</Btn>
+            <Btn variant="sol" onClick={startRematch}>Pay {wagerPP}◎ & Rematch</Btn>
           </div>
         </div>
       </div>}
@@ -871,8 +868,23 @@ export default function App() {
           <div>
             <div style={{ color: "var(--accent)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{game.winner === W ? hostName : guestName} wins {game.winPoints}pt{game.winPoints > 1 ? "s" : ""}!</div>
             {wagerPP > 0 && <div style={{ color: "var(--sol)", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Payout: {(lobby?.totalPot || 0).toFixed(4)} SOL</div>}
+            {(() => {
+              const rm = lobby?.rematch;
+              const iPaid = rm && (myColor === W ? rm.hostPaid : rm.guestPaid);
+              const theyPaid = rm && (myColor === W ? rm.guestPaid : rm.hostPaid);
+              if (iPaid && !theyPaid) {
+                return <div style={{ color: "var(--text-muted)", fontSize: 13, animation: "pulse 2s ease-in-out infinite", marginBottom: 8 }}>Waiting for opponent to accept rematch...</div>;
+              }
+              if (theyPaid && !iPaid) {
+                return <div style={{ marginBottom: 8 }}>
+                  <div style={{ color: "var(--green)", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Opponent wants a rematch!</div>
+                  <Btn variant="primary" onClick={() => wagerPP > 0 ? setRematchConfirm(true) : startRematch()}>Accept{wagerPP > 0 ? ` · Pay ${wagerPP}◎` : ""}</Btn>
+                </div>;
+              }
+              return null;
+            })()}
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              {myColor === W && <Btn variant="primary" onClick={() => wagerPP > 0 ? setRematchConfirm(true) : startGame()}>New Game{wagerPP > 0 ? ` · ${wagerPP}◎` : ""}</Btn>}
+              {!lobby?.rematch && <Btn variant="primary" onClick={() => wagerPP > 0 ? setRematchConfirm(true) : startRematch()}>New Game{wagerPP > 0 ? ` · ${wagerPP}◎` : ""}</Btn>}
               <Btn variant="ghost" onClick={abandonGame}>Leave</Btn>
             </div>
           </div>
