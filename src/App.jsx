@@ -76,12 +76,12 @@ function gmm(vm){if(!vm.length)return 0;return Math.max(...vm.map(m=>m.length))}
 // SESSION PERSISTENCE
 // ═══════════════════════════════════════════════════════════════
 function saveSession(lobbyId, playerId, myColor, playerName) {
-  try { sessionStorage.setItem("bg_session", JSON.stringify({ lobbyId, playerId, myColor, playerName, ts: Date.now() })); } catch {}
+  try { localStorage.setItem("bg_session", JSON.stringify({ lobbyId, playerId, myColor, playerName, ts: Date.now() })); } catch {}
 }
 function loadSession() {
-  try { const s = sessionStorage.getItem("bg_session"); if (!s) return null; const d = JSON.parse(s); if (Date.now() - d.ts > 4 * 3600000) return null; return d; } catch { return null; }
+  try { const s = localStorage.getItem("bg_session"); if (!s) return null; const d = JSON.parse(s); if (Date.now() - d.ts > 4 * 3600000) return null; return d; } catch { return null; }
 }
-function clearSession() { try { sessionStorage.removeItem("bg_session"); } catch {} }
+function clearSession() { try { localStorage.removeItem("bg_session"); } catch {} }
  
 // ═══════════════════════════════════════════════════════════════
 // CSS — PokerNow-inspired dark green felt
@@ -353,11 +353,11 @@ export default function App() {
   useEffect(() => {
     if (!document.getElementById('bg-css')) { const s = document.createElement('style'); s.id = 'bg-css'; s.textContent = CSS; document.head.appendChild(s); }
     api("/house").then(d => setHousePK(d.publicKey)).catch(() => {});
-    // Restore session
+    // Restore session from localStorage
     const session = loadSession();
     if (session) {
       setLobbyId(session.lobbyId); setPlayerId(session.playerId); setMyColor(session.myColor); setPlayerName(session.playerName);
-      setScreen("game"); // will fall back to lobby via poll if game hasn't started
+      setScreen("game");
     }
     // Auto-connect phantom
     const p = getPhantom();
@@ -365,6 +365,18 @@ export default function App() {
     // Fetch public lobbies
     api("/lobbies").then(d => setPublicLobbies(d.lobbies || [])).catch(() => {});
   }, []);
+ 
+  // When wallet connects, check server for active lobby with this wallet
+  useEffect(() => {
+    if (!walletAddr || lobbyId) return; // already in a game, skip
+    api(`/lobby/find-by-wallet/${walletAddr}`).then(d => {
+      if (d.found) {
+        setLobbyId(d.lobbyId); setPlayerId(d.playerId); setMyColor(d.color); setPlayerName(d.playerName);
+        saveSession(d.lobbyId, d.playerId, d.color, d.playerName);
+        // Don't auto-navigate — just set state so the banner shows
+      }
+    }).catch(() => {});
+  }, [walletAddr]);
  
   async function handleConnect() {
     try { const { provider, publicKey } = await connectPhantom(); setPhantomProvider(provider); setWalletAddr(publicKey); setError(""); setWalletBalance(await getBalance(publicKey)); }
@@ -896,4 +908,3 @@ const S = {
   label: { display: "block", color: "var(--text-muted)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 },
   input: { width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 4, color: "var(--text)", fontSize: 14, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box", transition: "border .2s" },
 };
- 
