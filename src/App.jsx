@@ -347,6 +347,7 @@ export default function App() {
   const [browserFilter, setBrowserFilter] = useState("joinable"); // "all" | "joinable"
   const [forfeitConfirm, setForfeitConfirm] = useState(false);
   const [turnToast, setTurnToast] = useState(false);
+  const [rematchConfirm, setRematchConfirm] = useState(false);
  
   // Init
   useEffect(() => {
@@ -615,6 +616,18 @@ export default function App() {
     } catch (e) { setError(e.message); setForfeitConfirm(false); }
   }
  
+  async function startRematch() {
+    const wager = wagerPP;
+    try {
+      const r = await payAndCall(wager, "/lobby/create", { playerName, wallet: walletAddr || "", wagerPerPoint: wager });
+      clearSession();
+      setLobbyId(r.lobbyId); setPlayerId(r.playerId); setMyColor(r.color);
+      saveSession(r.lobbyId, r.playerId, r.color, playerName);
+      setLobby(null); setPendingMoves([]); setAwaitingConfirm(false); setShowFireworks(false);
+      setRematchConfirm(false); setScreen("lobby"); setError("");
+    } catch (e) { setError(e.message); setRematchConfirm(false); }
+  }
+ 
   function handleBrowserJoin(id) {
     setJoinCode(id); setShowBrowser(false);
   }
@@ -788,6 +801,19 @@ export default function App() {
         <div style={{ background: "var(--green)", color: "#fff", padding: "10px 28px", borderRadius: 6, fontSize: 16, fontWeight: 700, letterSpacing: ".02em", boxShadow: "0 4px 20px rgba(39,174,96,.4)" }}>Your Turn</div>
       </div>}
  
+      {/* Rematch Confirm */}
+      {rematchConfirm && <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+        <div className="pop-in" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 36px", textAlign: "center", maxWidth: 360 }}>
+          <div style={{ fontSize: 16, color: "var(--text)", marginBottom: 8, fontWeight: 600 }}>Start a new game?</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 6 }}>A new lobby will be created with the same wager.</div>
+          <div style={{ fontSize: 15, color: "var(--sol)", fontWeight: 700, marginBottom: 20 }}>{wagerPP} SOL per point</div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+            <Btn variant="ghost" onClick={() => setRematchConfirm(false)}>Cancel</Btn>
+            <Btn variant="sol" onClick={startRematch}>Pay {wagerPP}◎ & Create</Btn>
+          </div>
+        </div>
+      </div>}
+ 
       {/* Forfeit Confirm */}
       {forfeitConfirm && <div className="fade-in" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
         <div className="pop-in" style={{ background: "var(--card)", border: "1px solid var(--card-border)", borderRadius: 8, padding: "28px 36px", textAlign: "center", maxWidth: 340 }}>
@@ -834,7 +860,7 @@ export default function App() {
             <div style={{ color: "var(--accent)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{game.winner === W ? hostName : guestName} wins {game.winPoints}pt{game.winPoints > 1 ? "s" : ""}!</div>
             {wagerPP > 0 && <div style={{ color: "var(--sol)", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Payout: {(lobby?.totalPot || 0).toFixed(4)} SOL</div>}
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              {myColor === W && wagerPP === 0 && <Btn variant="primary" onClick={startGame}>New Game</Btn>}
+              {myColor === W && <Btn variant="primary" onClick={() => wagerPP > 0 ? setRematchConfirm(true) : startGame()}>New Game{wagerPP > 0 ? ` · ${wagerPP}◎` : ""}</Btn>}
               <Btn variant="ghost" onClick={abandonGame}>Leave</Btn>
             </div>
           </div>
@@ -870,3 +896,4 @@ const S = {
   label: { display: "block", color: "var(--text-muted)", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".06em", marginBottom: 5 },
   input: { width: "100%", padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--card-border)", borderRadius: 4, color: "var(--text)", fontSize: 14, fontFamily: "'Inter',sans-serif", outline: "none", boxSizing: "border-box", transition: "border .2s" },
 };
+ 
