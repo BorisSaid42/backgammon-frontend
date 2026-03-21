@@ -584,6 +584,13 @@ export default function App() {
  
   function goHome() { setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); setForfeitConfirm(false); }
   function abandonGame() { clearSession(); setLobbyId(null); setPlayerId(null); setMyColor(null); setLobby(null); setScreen("home"); setPendingMoves([]); setAwaitingConfirm(false); setForfeitConfirm(false); }
+  const hasActiveSession = useMemo(() => {
+    if (screen !== "home") return false;
+    if (lobbyId && playerId) return true;
+    const s = loadSession();
+    return !!(s && s.lobbyId);
+  }, [screen, lobbyId, playerId]);
+ 
   function returnToGame() {
     if (lobbyId && playerId) {
       setScreen(lobby?.game ? "game" : "lobby");
@@ -595,7 +602,6 @@ export default function App() {
       }
     }
   }
-  const hasActiveSession = !!(lobbyId && playerId && screen === "home");
  
   async function fetchLobbies() {
     try { const d = await api("/lobbies"); setPublicLobbies(d.lobbies || []); }
@@ -827,7 +833,10 @@ export default function App() {
           <div>
             <div style={{ color: "var(--accent)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{game.winner === W ? hostName : guestName} wins {game.winPoints}pt{game.winPoints > 1 ? "s" : ""}!</div>
             {wagerPP > 0 && <div style={{ color: "var(--sol)", fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Payout: {(lobby?.totalPot || 0).toFixed(4)} SOL</div>}
-            {myColor === W && <Btn variant="primary" onClick={startGame}>New Game</Btn>}
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              {myColor === W && wagerPP === 0 && <Btn variant="primary" onClick={startGame}>New Game</Btn>}
+              <Btn variant="ghost" onClick={abandonGame}>Leave</Btn>
+            </div>
           </div>
         ) : game.phase === "double" ? (
           <div style={{ color: "var(--accent)", animation: "pulse 2s ease-in-out infinite" }}>Doubling in progress...</div>
@@ -847,9 +856,6 @@ export default function App() {
       </div>
       {game.phase !== "gameover" && <div style={{ textAlign: "center", marginTop: 8 }}>
         <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px", opacity: .6 }} onClick={() => setForfeitConfirm(true)}>Forfeit</Btn>
-      </div>}
-      {game.phase === "gameover" && <div style={{ textAlign: "center", marginTop: 8 }}>
-        <Btn variant="ghost" style={{ fontSize: 11, padding: "6px 14px" }} onClick={abandonGame}>Leave</Btn>
       </div>}
     </div>
   );
